@@ -23,13 +23,27 @@ if not firebase_admin._apps:
     )
 
 db = firestore.client()
-
-
+def get_pending_jobs():
+    docs = (
+        db.collection(DOWNLOAD_QUEUE)
+        .where(
+            "status",
+            "==",
+            "pending"
+        ).stream()
+    )
+    jobs = []
+    for doc in docs:
+        data = doc.to_dict()
+        data["jobId"] = doc.id
+        jobs.append(data)
+    return len(jobs)
 @app.get("/")
 def home():
-
+    number=get_pending_jobs()
     return {
         "status": "running"
+        "no_of_jobs": number
     }
 
 

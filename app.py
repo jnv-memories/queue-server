@@ -42,7 +42,7 @@ def get_pending_jobs():
 def home():
     number=get_pending_jobs()
     return {
-        "status": "running"
+        "status": "running",
         "no_of_jobs": number
     }
 

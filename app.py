@@ -25,7 +25,7 @@ if not firebase_admin._apps:
 db = firestore.client()
 def get_pending_jobs():
     docs = (
-        db.collection(DOWNLOAD_QUEUE)
+        db.collection("downloadQueue")
         .where(
             "status",
             "==",

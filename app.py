@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # <-- NEW: Import CORS
 import firebase_admin
 
 from firebase_admin import credentials
@@ -9,6 +10,7 @@ import json
 import time
 
 app = Flask(__name__)
+CORS(app)  # <-- NEW: Enable CORS for the app
 
 if not firebase_admin._apps:
 
@@ -23,6 +25,7 @@ if not firebase_admin._apps:
     )
 
 db = firestore.client()
+
 def get_pending_jobs():
     docs = (
         db.collection("downloadQueue")
@@ -38,9 +41,10 @@ def get_pending_jobs():
         data["jobId"] = doc.id
         jobs.append(data)
     return len(jobs)
+
 @app.get("/")
 def home():
-    number=get_pending_jobs()
+    number = get_pending_jobs()
     return {
         "status": "running",
         "no_of_jobs": number

@@ -101,7 +101,25 @@ def add():
         "jobId": doc.id
 
     }
-
+@app.get("/update")
+def update():
+    # Query for all jobs with a 'failed' status
+    failed_docs = (
+        db.collection("downloadQueue")
+        .where("status", "==", "failed")
+        .stream()
+    )
+    
+    count = 0
+    # Iterate through the results and update each one
+    for doc in failed_docs:
+        doc.reference.update({"status": "pending"})
+        count += 1
+        
+    return jsonify({
+        "success": True,
+        "no_of_tasks_done": count
+    })
 
 if __name__ == "__main__":
 

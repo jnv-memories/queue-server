@@ -1,0 +1,62 @@
+name: YouTube Downloader
+
+on:
+  workflow_dispatch:
+    inputs:
+      youtube_url:
+        description: 'Paste the YouTube Video URL here'
+        required: true
+        type: string
+      download_type:
+        description: 'Choose what to download'
+        required: true
+        default: 'video'
+        type: choice
+        options:
+          - video
+          - audio
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Ensure the latest Python version is used (yt-dlp recommends 3.11+)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Step 2: Install ffmpeg (for merging high-quality video/audio) and yt-dlp
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          pip install -U yt-dlp
+
+      # Step 3: Create a directory to hold the downloaded file
+      - name: Create Downloads Folder
+        run: mkdir -p downloads
+
+      # Step 4a: Run yt-dlp for Video
+      - name: Download Video (MP4)
+        if: ${{ github.event.inputs.download_type == 'video' }}
+        run: |
+          cd downloads
+          yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 -o "%(title)s.%(ext)s" "${{ github.event.inputs.youtube_url }}"
+
+      # Step 4b: Run yt-dlp for Audio
+      - name: Download Audio (MP3)
+        if: ${{ github.event.inputs.download_type == 'audio' }}
+        run: |
+          cd downloads
+          yt-dlp --extract-audio --audio-format mp3 --audio-quality 0 -o "%(title)s.%(ext)s" "${{ github.event.inputs.youtube_url }}"
+
+      # Step 5: Upload the downloaded file as a GitHub Artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YouTube-Download
+          path: downloads/*
+          retention-days: 1 # Keeps your GitHub storage clean by deleting the artifact after 1 day

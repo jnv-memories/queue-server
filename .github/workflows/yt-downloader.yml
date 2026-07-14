@@ -26,11 +26,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -38,15 +33,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install -U git+https://github.com/yt-dlp/yt-dlp.git@master
 
+      # NEW FIX: Install and start Cloudflare WARP to hide the GitHub Datacenter IP
+      - name: Setup Cloudflare WARP Proxy
+        run: |
+          curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
+          sudo apt-get update
+          sudo apt-get install -y cloudflare-warp
+          warp-cli --accept-tos registration new
+          warp-cli --accept-tos mode proxy
+          warp-cli --accept-tos connect
+          sleep 5 # Give the proxy a few seconds to connect
+
       - name: Create Downloads Folder
         run: mkdir -p downloads
 
-      # Notice: Removed the cookie flag and strictly enforced ios/android clients
+      # Note the addition of --proxy "socks5://127.0.0.1:40000" to route traffic securely
       - name: Download Video (MP4)
         if: ${{ github.event.inputs.download_type == 'video' }}
         run: |
           cd downloads
-          yt-dlp --js-runtimes node \
+          yt-dlp --proxy "socks5://127.0.0.1:40000" \
                  --extractor-args "youtube:player_client=ios,android" \
                  -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
                  --merge-output-format mp4 \
@@ -56,7 +63,7 @@ jobs:
         if: ${{ github.event.inputs.download_type == 'audio' }}
         run: |
           cd downloads
-          yt-dlp --js-runtimes node \
+          yt-dlp --proxy "socks5://127.0.0.1:40000" \
                  --extractor-args "youtube:player_client=ios,android" \
                  --extract-audio \
                  --audio-format mp3 \

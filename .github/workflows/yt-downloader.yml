@@ -26,7 +26,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      # FIX 1: Install Node.js to provide a JS runtime for yt-dlp signature decryption
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -37,9 +36,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
-          pip install -U yt-dlp
+          # FIX 1: Install the bleeding-edge master branch directly from GitHub
+          pip install -U git+https://github.com/yt-dlp/yt-dlp.git@master
 
-      # FIX 2: Generate the cookies.txt file from the GitHub Secret securely
       - name: Load Cookies
         run: |
           echo "${{ secrets.YT_COOKIES }}" > cookies.txt
@@ -47,18 +46,29 @@ jobs:
       - name: Create Downloads Folder
         run: mkdir -p downloads
 
-      # Notice the added --cookies parameter in the yt-dlp commands
       - name: Download Video (MP4)
         if: ${{ github.event.inputs.download_type == 'video' }}
         run: |
           cd downloads
-          yt-dlp --cookies ../cookies.txt -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 -o "%(title)s.%(ext)s" "${{ github.event.inputs.youtube_url }}"
+          # FIX 2 & 3: Force Node.js runtime and spoof iOS/Android clients
+          yt-dlp --cookies ../cookies.txt \
+                 --js-runtimes node \
+                 --extractor-args "youtube:player_client=ios,android,web" \
+                 -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
+                 --merge-output-format mp4 \
+                 -o "%(title)s.%(ext)s" "${{ github.event.inputs.youtube_url }}"
 
       - name: Download Audio (MP3)
         if: ${{ github.event.inputs.download_type == 'audio' }}
         run: |
           cd downloads
-          yt-dlp --cookies ../cookies.txt --extract-audio --audio-format mp3 --audio-quality 0 -o "%(title)s.%(ext)s" "${{ github.event.inputs.youtube_url }}"
+          yt-dlp --cookies ../cookies.txt \
+                 --js-runtimes node \
+                 --extractor-args "youtube:player_client=ios,android,web" \
+                 --extract-audio \
+                 --audio-format mp3 \
+                 --audio-quality 0 \
+                 -o "%(title)s.%(ext)s" "${{ github.event.inputs.youtube_url }}"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

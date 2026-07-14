@@ -36,24 +36,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
-          # FIX 1: Install the bleeding-edge master branch directly from GitHub
           pip install -U git+https://github.com/yt-dlp/yt-dlp.git@master
-
-      - name: Load Cookies
-        run: |
-          echo "${{ secrets.YT_COOKIES }}" > cookies.txt
 
       - name: Create Downloads Folder
         run: mkdir -p downloads
 
+      # Notice: Removed the cookie flag and strictly enforced ios/android clients
       - name: Download Video (MP4)
         if: ${{ github.event.inputs.download_type == 'video' }}
         run: |
           cd downloads
-          # FIX 2 & 3: Force Node.js runtime and spoof iOS/Android clients
-          yt-dlp --cookies ../cookies.txt \
-                 --js-runtimes node \
-                 --extractor-args "youtube:player_client=ios,android,web" \
+          yt-dlp --js-runtimes node \
+                 --extractor-args "youtube:player_client=ios,android" \
                  -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
                  --merge-output-format mp4 \
                  -o "%(title)s.%(ext)s" "${{ github.event.inputs.youtube_url }}"
@@ -62,9 +56,8 @@ jobs:
         if: ${{ github.event.inputs.download_type == 'audio' }}
         run: |
           cd downloads
-          yt-dlp --cookies ../cookies.txt \
-                 --js-runtimes node \
-                 --extractor-args "youtube:player_client=ios,android,web" \
+          yt-dlp --js-runtimes node \
+                 --extractor-args "youtube:player_client=ios,android" \
                  --extract-audio \
                  --audio-format mp3 \
                  --audio-quality 0 \
